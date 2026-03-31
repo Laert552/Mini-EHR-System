@@ -1,21 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { registerPatient } from '@/actions/auth'; 
+import { getAllDoctors } from '@/actions/doctor';
+
+// Թարմացված տիպեր՝ ըստ քո Prisma սխեմայի
+type Doctor = {
+  id: string;
+  specialty: string;
+  user: { 
+    fullName: string; 
+    email: string 
+  };
+};
 
 export default function RegisterPatient() {
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     password: '',
     birthDate: '',
     gender: 'MALE',
+    doctorId: '', // Ավելացրինք doctorId դաշտը
   });
+
+  // Բեռնում ենք բժիշկների ցուցակը էջը բացելիս
+  useEffect(() => {
+    async function loadDoctors() {
+      try {
+        const data = await getAllDoctors();
+        setDoctors(data as any);
+      } catch (error) {
+        console.error("Բժիշկների բեռնման սխալ:", error);
+      }
+    }
+    loadDoctors();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.doctorId) {
+      alert("Խնդրում ենք ընտրել բժշկին");
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -25,18 +57,27 @@ export default function RegisterPatient() {
         gender: formData.gender as "MALE" | "FEMALE",
       };
 
-      const response = await registerPatient(dataToSend);
+      await registerPatient(dataToSend);
       
       alert('Պացիենտը հաջողությամբ գրանցվեց համակարգում։');
-      setFormData({ fullName: '', email: '', password: '', birthDate: '', gender: 'MALE' });
+      // Մաքրում ենք ֆորման
+      setFormData({ 
+        fullName: '', 
+        email: '', 
+        password: '', 
+        birthDate: '', 
+        gender: 'MALE',
+        doctorId: '' 
+      });
       
     } catch (error) {
       console.error("Գրանցման խնդիր:", error);
-      alert('Սխալ տեղի ունեցավ գրանցման ժամանակ (կամ էլ. փոստն արդեն զբաղված է)։');
+      alert('Սխալ տեղի ունեցավ գրանցման ժամանակ։');
     } finally {
       setIsLoading(false);
     }
   };
+
   return (
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-gray-100">
       <h1 className="text-2xl font-bold mb-6 text-gray-800">Նոր Պացիենտի Գրանցում</h1>
@@ -53,7 +94,7 @@ export default function RegisterPatient() {
               onChange={(e) => setFormData({...formData, fullName: e.target.value})}
               type="text" 
               placeholder="Արամ Խաչատրյան" 
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
@@ -66,7 +107,7 @@ export default function RegisterPatient() {
               onChange={(e) => setFormData({...formData, email: e.target.value})}
               type="email" 
               placeholder="aram@example.com" 
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
@@ -79,7 +120,7 @@ export default function RegisterPatient() {
               onChange={(e) => setFormData({...formData, password: e.target.value})}
               type="password" 
               placeholder="********" 
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
@@ -91,7 +132,7 @@ export default function RegisterPatient() {
               value={formData.birthDate}
               onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
               type="date" 
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
 
@@ -101,10 +142,28 @@ export default function RegisterPatient() {
             <select 
               value={formData.gender}
               onChange={(e) => setFormData({...formData, gender: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white"
             >
               <option value="MALE">Արական</option>
               <option value="FEMALE">Իգական</option>
+            </select>
+          </div>
+
+          {/* Բժշկի Ընտրություն (ԱՎԵԼԱՑՎԱԾ) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ընտրեք Բժշկին</label>
+            <select 
+              required
+              value={formData.doctorId}
+              onChange={(e) => setFormData({...formData, doctorId: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+            >
+              <option value="">-- Ընտրել --</option>
+              {doctors.map((doc) => (
+                <option key={doc.id} value={doc.id}>
+                  {doc.user?.fullName} ({doc.specialty})
+                </option>
+              ))}
             </select>
           </div>
 
