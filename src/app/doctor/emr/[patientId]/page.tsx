@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { getMedicalRecordsByPatient, createMedicalRecord } from '@/actions/medical-records';
 import { addDiagnosis, deleteDiagnosis } from '@/actions/diagnosis';
 import { addPrescription, deletePrescription } from '@/actions/prescription';
+import { uploadLabResult, getLabResultsByPatient } from '@/actions/lab-results';
 
 export default function EMRPage() {
     const params = useParams();
@@ -18,12 +19,19 @@ export default function EMRPage() {
     const [newRecordNotes, setNewRecordNotes] = useState('');
     const [diagnosisName, setDiagnosisName] = useState('');
     const [prescriptionName, setPrescriptionName] = useState('');
+    const [labTitle, setLabTitle] = useState('');
+    const [isUploadingLab, setIsUploadingLab] = useState(false);
+    const [labResults, setLabResults] = useState<any[]>([]);
 
     const loadEMRHistory = async () => {
         setIsLoading(true);
         try {
-            const history = await getMedicalRecordsByPatient(patientId);
+            const [history, labs] = await Promise.all([
+                getMedicalRecordsByPatient(patientId),
+                getLabResultsByPatient(patientId),
+            ]);
             if (history) setRecords(history);
+            if (labs) setLabResults(labs);
         } catch (error) {
             console.error("EMR բեռնման սխալ:", error);
         } finally {
@@ -97,11 +105,31 @@ export default function EMRPage() {
         }
     };
 
+    const handleUploadLab = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingLab(true);
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+            await uploadLabResult(patientId, labTitle.trim() || file.name, fd);
+            setLabTitle('');
+            await loadEMRHistory();
+            alert('Ֆայլը հաջողությամբ վերբեռնվեց։');
+        } catch (error) {
+            alert('Ֆայլի վերբեռնումը ձախողվեց։');
+        } finally {
+            setIsUploadingLab(false);
+            e.target.value = '';
+        }
+    };
+
     if (isLoading) return <div className="p-8 text-center text-slate-500">Բեռնվում է պացիենտի քարտը...</div>;
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 p-6">
-            <div className="bg-slate-800 rounded-xl p-6 text-white shadow-md">
+        <div className="max-w-6xl mx-auto space-y-8 p-4 sm:p-6">
+            <div className="bg-teal-500 rounded-xl p-6 text-white shadow-md">
                 <h1 className="text-2xl font-bold mb-1">Էլեկտրոնային Բժշկական Քարտ (EMR)</h1>
                 <p className="text-slate-300">Պացիենտի ID: {patientId.slice(0, 8).toUpperCase()}</p>
             </div>
@@ -121,11 +149,33 @@ export default function EMRPage() {
                         <button 
                             type="submit" 
                             disabled={isSubmitting}
-                            className="w-full bg-teal-600 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 disabled:bg-teal-400"
+                            className="w-full bg-teal-500 text-white py-2.5 rounded-lg font-medium hover:bg-teal-700 disabled:bg-teal-400"
                         >
                             {isSubmitting ? 'Պահպանվում է...' : 'Պահպանել Գրառումը'}
                         </button>
                     </form>
+
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-6">
+                        <h2 className="text-lg font-bold text-slate-800 mb-4">📎 Վերբեռնել անալիզի ֆայլ</h2>
+                        <input
+                            type="text"
+                            value={labTitle}
+                            onChange={(e) => setLabTitle(e.target.value)}
+                            placeholder="Ֆայլի վերնագիր (ոչ պարտադիր)"
+                            className="w-full p-2.5 border border-slate-300 rounded-lg outline-none mb-3"
+                        />
+                        <label className="w-full inline-flex justify-center cursor-pointer bg-blue-600 text-white py-2.5 rounded-lg font-medium hover:bg-blue-700 transition">
+                            {isUploadingLab ? 'Վերբեռնվում է...' : 'Ընտրել PDF և վերբեռնել'}
+                            <input
+                                type="file"
+                                accept=".pdf"
+                                className="hidden"
+                                onChange={handleUploadLab}
+                                disabled={isUploadingLab}
+                            />
+                        </label>
+                        <p className="text-xs text-slate-500 mt-2">Այս ֆայլը կերևա նաև պացիենտի էջում՝ ներբեռնելու համար։</p>
+                    </div>
                 </div>
 
                 <div className="lg:col-span-2 space-y-6">
@@ -155,7 +205,7 @@ export default function EMRPage() {
                                                 </li>
                                             ))}
                                         </ul>
-                                        <div className="flex gap-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
                                             <input 
                                                 type="text" 
                                                 value={diagnosisName}
@@ -163,7 +213,7 @@ export default function EMRPage() {
                                                 placeholder="Նոր..." 
                                                 className="flex-1 border p-2 rounded text-sm outline-none"
                                             />
-                                            <button onClick={() => handleAddDiagnosis(record.id)} className="bg-slate-800 text-white px-3 rounded text-sm">Ավելացնել</button>
+                                            <button onClick={() => handleAddDiagnosis(record.id)} className="bg-teal-500 text-white px-1 rounded text-sm">Ավելացնել</button>
                                         </div>
                                     </div>
 
@@ -177,7 +227,7 @@ export default function EMRPage() {
                                                 </li>
                                             ))}
                                         </ul>
-                                        <div className="flex gap-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
                                             <input 
                                                 type="text" 
                                                 value={prescriptionName}
@@ -185,13 +235,32 @@ export default function EMRPage() {
                                                 placeholder="Նշանակել..." 
                                                 className="flex-1 border p-2 rounded text-sm outline-none"
                                             />
-                                            <button onClick={() => handleAddPrescription(record.id)} className="bg-slate-800 text-white px-3 rounded text-sm">Ավելացնել</button>
+                                            <button onClick={() => handleAddPrescription(record.id)} className="bg-teal-500 text-white px-1 rounded text-sm">Ավելացնել</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         ))
                     )}
+
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 className="text-lg font-bold text-slate-800 mb-4">📄 Վերբեռնված ֆայլեր</h3>
+                        {labResults.length === 0 ? (
+                            <p className="text-slate-500 text-sm">Վերբեռնված ֆայլեր դեռ չկան։</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {labResults.map((res) => (
+                                    <div key={res.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2">
+                                        <div>
+                                            <p className="font-medium text-slate-800">{res.title}</p>
+                                            <p className="text-xs text-slate-500">{new Date(res.createdAt).toLocaleDateString('hy-AM')}</p>
+                                        </div>
+                                        <span className="text-xs text-slate-400 italic sm:text-right">Միայն պացիենտի համար</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
