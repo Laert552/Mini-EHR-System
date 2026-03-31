@@ -1,4 +1,3 @@
-// app/doctor/emr/[patientId]/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -20,7 +19,6 @@ export default function EMRPage() {
     const [diagnosisName, setDiagnosisName] = useState('');
     const [prescriptionName, setPrescriptionName] = useState('');
 
-    // 1. Բեռնում ենք պացիենտի պատմությունը (ՈՒՂՂՎԱԾ Է՝ ուղարկում ենք ուղիղ տեքստ)
     const loadEMRHistory = async () => {
         setIsLoading(true);
         try {
@@ -37,12 +35,10 @@ export default function EMRPage() {
         if (patientId) loadEMRHistory();
     }, [patientId]);
 
-    // 2. Նոր գրառում (այցի նկարագրություն)
     const handleCreateRecord = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            // ՈՒՂՂՎԱԾ Է՝ ավելացրել ենք doctorId ժամանակավոր արժեքով
             await createMedicalRecord({ 
                 patientId, 
                 doctorId: "temp-doc-id", 
@@ -57,11 +53,9 @@ export default function EMRPage() {
         }
     };
 
-    // 3. Ախտորոշում ավելացնել և ջնջել
     const handleAddDiagnosis = async (recordId: string) => {
         if (!diagnosisName.trim()) return;
         try {
-            // ՈՒՂՂՎԱԾ Է՝ ավելացրել ենք description դաշտը
             await addDiagnosis({ 
                 recordId, 
                 title: diagnosisName, 
@@ -83,7 +77,6 @@ export default function EMRPage() {
         }
     };
 
-    // 4. Դեղատոմս ավելացնել և ջնջել
     const handleAddPrescription = async (recordId: string) => {
         if (!prescriptionName.trim()) return;
         try {
@@ -114,7 +107,6 @@ export default function EMRPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* ՁԱԽ ԿՈՂՄ: Նոր Գրառում */}
                 <div className="lg:col-span-1">
                     <form onSubmit={handleCreateRecord} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                         <h2 className="text-lg font-bold text-slate-800 mb-4">Նոր Այցի Գրառում</h2>
@@ -136,7 +128,6 @@ export default function EMRPage() {
                     </form>
                 </div>
 
-                {/* ԱՋ ԿՈՂՄ: Պատմություն */}
                 <div className="lg:col-span-2 space-y-6">
                     <h2 className="text-xl font-bold text-slate-800">Այցերի Պատմություն</h2>
                     {records.length === 0 ? (
@@ -154,7 +145,6 @@ export default function EMRPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Ախտորոշումներ */}
                                     <div>
                                         <h3 className="font-semibold text-slate-800 mb-3">🔬 Ախտորոշումներ</h3>
                                         <ul className="space-y-2 mb-4">
@@ -177,7 +167,6 @@ export default function EMRPage() {
                                         </div>
                                     </div>
 
-                                    {/* Դեղատոմսեր */}
                                     <div>
                                         <h3 className="font-semibold text-slate-800 mb-3">💊 Դեղատոմսեր</h3>
                                         <ul className="space-y-2 mb-4">
