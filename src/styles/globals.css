@@ -1,1 +1,8 @@
 @import "tailwindcss";
+
+/* Force black text across the whole app UI */
+html,
+body,
+body * {
+  color: #000 !important;
+}

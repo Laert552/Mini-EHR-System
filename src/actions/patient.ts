@@ -52,8 +52,8 @@ export async function getPatientByUserId(userId: string) {
       labResults: { orderBy: { createdAt: "desc" } },
     },
   });
-
-  if (!patient) throw new Error("Patient profile not found");
+  // Return null for missing profile so UI can handle "not found"
+  // without turning it into a server 500.
   return patient;
 }
 
